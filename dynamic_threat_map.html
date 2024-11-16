@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dynamic Threat Map</title>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        const map = L.map('map').setView([20.0, 0.0], 2);
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        // Marker Icon Colors
+        function getColor(threatLevel) {
+            return threatLevel === "HIGH" ? "red" : 
+                   threatLevel === "MODERATE" ? "orange" : "green";
+        }
+
+        // Update Map Dynamically
+        function updateMap() {
+            fetch("threats.json")  // Fetch the JSON file
+                .then(response => response.json())
+                .then(data => {
+                    map.eachLayer((layer) => {
+                        if (layer instanceof L.Marker) {
+                            map.removeLayer(layer);
+                        }
+                    });
+
+                    data.forEach(threat => {
+                        const coordinates = threat.coordinates || [20.0, 0.0];
+                        const color = getColor(threat.threat_level);
+
+                        const popupContent = `
+                            <strong>${threat.title}</strong><br>
+                            ${threat.description}<br>
+                            <a href="${threat.url}" target="_blank">Read more</a><br>
+                            <strong>Threat Level:</strong> ${threat.threat_level}
+                        `;
+
+                        L.marker(coordinates, {
+                            icon: L.divIcon({
+                                className: 'custom-icon',
+                                html: `<div style="background-color:${color};width:15px;height:15px;border-radius:50%;"></div>`,
+                                iconSize: [15, 15],
+                            })
+                        })
+                        .bindPopup(popupContent)
+                        .addTo(map);
+                    });
+                });
+        }
+
+        // Update map every 5 seconds
+        setInterval(updateMap, 5000);
+
+        // Initial update
+        updateMap();
+    </script>
+</body>
+</html>
